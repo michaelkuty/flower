@@ -9,9 +9,11 @@ from base64 import b64decode
 
 import tornado
 
-from ..utils import template, bugreport 
+from ..utils import template, bugreport
+
 
 class BaseHandler(tornado.web.RequestHandler):
+
     def render(self, *args, **kwargs):
         functions = inspect.getmembers(template, inspect.isfunction)
         assert not set(map(lambda x: x[0], functions)) & set(kwargs.keys())
@@ -23,7 +25,7 @@ class BaseHandler(tornado.web.RequestHandler):
             message = None
             if 'exc_info' in kwargs and\
                     kwargs['exc_info'][0] == tornado.web.HTTPError:
-                    message = kwargs['exc_info'][1].log_message
+                message = kwargs['exc_info'][1].log_message
             self.render('404.html', message=message)
         elif status_code == 500:
             error_trace = ""
@@ -42,22 +44,67 @@ class BaseHandler(tornado.web.RequestHandler):
             message = None
             if 'exc_info' in kwargs and\
                     kwargs['exc_info'][0] == tornado.web.HTTPError:
-                    message = kwargs['exc_info'][1].log_message
-                    self.set_header('Content-Type', 'text/plain')
-                    self.write(message)
+                message = kwargs['exc_info'][1].log_message
+                self.set_header('Content-Type', 'text/plain')
+                self.write(message)
             self.set_status(status_code)
+
+    def get_authorization_key(self):
+        """
+        Return token from request's 'Authorization:' header and tenant from 
+        'Tenant:' header
+
+        """
+        auth = self.request.headers.get("Authorization", "")
+        tenant = self.request.headers.get("Tenant", "")
+        if isinstance(auth, type('')):
+            # Work around django test client oddness
+            auth = auth.encode("UTF-8")
+
+        auth = auth.split()
+
+        if not auth or auth[0].lower() != 'token':
+            return None
+
+        if len(auth) == 1:
+            msg = 'Invalid token header. No credentials provided.'
+            raise tornado.web.HTTPError(401)
+        elif len(auth) > 2:
+            msg = 'Invalid token header. Token string should not contain spaces.'
+            raise tornado.web.HTTPError(401)
+
+        return auth[1], tenant
 
     def get_current_user(self):
         # Basic Auth
+
         basic_auth = self.application.options.basic_auth
+
         if basic_auth:
+
             auth_header = self.request.headers.get("Authorization", "")
+
             try:
                 basic, credentials = auth_header.split()
                 credentials = b64decode(credentials.encode()).decode()
                 if basic != 'Basic' or credentials not in basic_auth:
                     raise tornado.web.HTTPError(401)
-            except ValueError:
+            except Exception, e:
+                raise tornado.web.HTTPError(401)
+
+        # basic Keystone Auth
+        keystone_auth = self.application.options.keystone_auth
+
+        if keystone_auth:
+
+            try:
+                from keystoneclient.v2_0 import client
+                token, tenant = self.get_authorization_key()
+                keystone = client.Client(
+                    token=token, endpoint=keystone_auth[0])
+                token = keystone.get_raw_token_from_identity_service(
+                    keystone_auth[0], token=token, tenant_name=tenant)
+            except Exception, e:
                 raise tornado.web.HTTPError(401)
 
         # Google OpenID

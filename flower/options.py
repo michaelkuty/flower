@@ -21,6 +21,8 @@ define("auth", default='', type=str,
        help="regexp of emails to grant access")
 define("basic_auth", type=str, default=None, multiple=True,
        help="enable http basic authentication")
+define("keystone_auth", type=str, default=None, multiple=True,
+       help="enable Keystone authentication (str:endpoint1)")
 define("oauth2_key", type=str, default=None,
        help="Google oauth2 key (requires --auth)")
 define("oauth2_secret", type=str, default=None,
