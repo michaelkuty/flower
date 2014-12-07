@@ -23,6 +23,11 @@ define("basic_auth", type=str, default=None, multiple=True,
        help="enable http basic authentication")
 define("keystone_auth", type=str, default=None, multiple=True,
        help="enable Keystone authentication (str:endpoint1)")
+define("allowed_hosts", type=str, default=[], multiple=True,
+       help="enable ['http://localhost:9000']")
+define("allowed_strict", default=False,
+       help="now will be allowed localhost, http://localhost or https://")
+
 define("oauth2_key", type=str, default=None,
        help="Google oauth2 key (requires --auth)")
 define("oauth2_secret", type=str, default=None,

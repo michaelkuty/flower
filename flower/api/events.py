@@ -1,13 +1,20 @@
 from __future__ import absolute_import
 
 import sys
-
 from ..api import BaseWebSocketHandler
 
 
 class EventsApiHandler(BaseWebSocketHandler):
+
+    def check_origin(self, origin):
+
+        for host in self.application.options.allowed_hosts:
+            if (host == "*" or host == origin) \
+            or (not self.application.options.allowed_strict and host in origin):
+                return True
+        return False
+
     def open(self, task_id=None):
-        BaseWebSocketHandler.open(self)
         self.task_id = task_id
 
     @classmethod
@@ -15,7 +22,6 @@ class EventsApiHandler(BaseWebSocketHandler):
         for l in cls.listeners:
             if not l.task_id or l.task_id == event['uuid']:
                 l.write_message(event)
-
 
 EVENTS = ('task-sent', 'task-received', 'task-started', 'task-succeeded',
           'task-failed', 'task-revoked', 'task-retried')
