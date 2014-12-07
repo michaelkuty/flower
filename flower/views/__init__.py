@@ -9,8 +9,7 @@ from base64 import b64decode
 
 import tornado
 
-from ..utils import template, bugreport
-
+from ..utils import template, bugreport 
 
 class BaseHandler(tornado.web.RequestHandler):
     def render(self, *args, **kwargs):
